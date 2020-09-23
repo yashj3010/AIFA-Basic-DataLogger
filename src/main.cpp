@@ -138,7 +138,12 @@ int getLight()
   return 0;
 }
 
-int getMoisture()
+int getMoisture1()
+{
+  return 0;
+}
+
+int getMoisture2()
 {
   return 0;
 }

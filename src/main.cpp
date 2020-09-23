@@ -299,7 +299,8 @@ void loop()
     lastMsg = now;
     getTemp();
     getLight();
-    getMoisture();
+    getMoisture1();
+    getMoisture2();
     getDateTime();
     getIR();
   }

@@ -136,6 +136,8 @@ int getTemp()
   Serial.println(F("C"));
   client.publish("outTopic/Temp", PackFloatData(event.temperature, lightchar));
   return 0;
+
+  
 }
 
 int getDateTime()
@@ -322,11 +324,11 @@ void loop()
   //int before = 0;
   long now = millis();
 
-  if (now - lastMsg > 1000)
+  if (now - lastMsg > 5000)
   {
     lastMsg = now;
     getTemp();
     getDateTime();
     getMultiplexData();
   }
-}
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                             

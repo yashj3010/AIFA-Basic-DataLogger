@@ -3,9 +3,6 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
-#include <IRremoteESP8266.h>
-#include <IRrecv.h>
-#include <IRutils.h>
 #include <Adafruit_Sensor.h>
 #include <DHT.h>
 #include <DHT_U.h>
@@ -73,9 +70,8 @@ WiFiClient espClient;
 PubSubClient client(espClient);
 DHT_Unified dht(DHTPIN, DHTTYPE);
 uint32_t delayMS;
-IRrecv irrecv(kRecvPin);
 sensors_event_t event;
-decode_results results;
+
 
 // ----------- HELPER FUNCTIONS ----------------
 
@@ -126,18 +122,18 @@ int togglePins(String payload)
   return 0;
 }
 
-
-
 int getTemp()
 {
   dht.humidity().getEvent(&event);
   Serial.print(F("Humidity: "));
   Serial.print(event.relative_humidity);
   Serial.println(F("%"));
-
-  
   client.publish("outTopic/Humidity", PackFloatData(event.relative_humidity, lightchar));
+
   dht.temperature().getEvent(&event);
+  Serial.print(F("temperature: "));
+  Serial.print(event.temperature);
+  Serial.println(F("C"));
   client.publish("outTopic/Temp", PackFloatData(event.temperature, lightchar));
   return 0;
 }
@@ -156,6 +152,8 @@ int getMultiplexData()
         digitalWrite(controlPins[j], LOW);
       }
       soilMoisture1 = analogRead(analogPin);
+      Serial.print(F("soilMoisture1: "));
+      Serial.print(soilMoisture1);
       client.publish("outTopic/SM1", PackIntData(soilMoisture1, lightchar));
     }
     else if (i == 1){
@@ -165,6 +163,8 @@ int getMultiplexData()
         digitalWrite(controlPins[j], LOW);
       }
       soilMoisture2 = analogRead(analogPin);
+      Serial.print(F("soilMoisture2: "));
+      Serial.print(soilMoisture2);
       client.publish("outTopic/SM2", PackIntData(soilMoisture2, lightchar));
     }
     else if (i == 2){
@@ -176,6 +176,8 @@ int getMultiplexData()
         }
       }
       light = analogRead(analogPin);
+      Serial.print(F("light: "));
+      Serial.print(light);
       client.publish("outTopic/Light", PackIntData(light, lightchar));
     }
     delay(250);
@@ -185,29 +187,6 @@ int getMultiplexData()
 
 int logData()
 {
-  return 0;
-}
-
-int getIR()
-{
-  if (irrecv.decode(&results))
-  {
-    Serial.println("recoeved something");
-    if (results.value == 0xC084)
-    {
-      if (digitalRead(5) == LOW)
-      {
-        digitalWrite(5, HIGH);
-        Serial.println("bla");
-      }
-      else
-      {
-        digitalWrite(5, LOW);
-        Serial.println("blaq");
-      }
-    }
-    irrecv.resume();
-  }
   return 0;
 }
 
@@ -300,9 +279,7 @@ void setup()
   dht.humidity().getSensor(&sensor);
 
   delayMS = sensor.min_delay / 1000;
-  irrecv.enableIRIn(); // Start the receiver
-  Serial.println(kRecvPin);
-
+  
   // CALLING FUNCTIONS
   setOutputMode(outputPins);
   setup_wifi();
@@ -329,6 +306,5 @@ void loop()
     getTemp();
     getDateTime();
     getMultiplexData();
-    getIR();
   }
 }

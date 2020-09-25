@@ -324,6 +324,7 @@ void loop()
   long now = millis();
 
   if (now - lastMsg > 1000)
+  {
     lastMsg = now;
     getTemp();
     getDateTime();

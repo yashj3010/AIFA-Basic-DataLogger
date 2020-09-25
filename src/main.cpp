@@ -19,6 +19,11 @@
 #define greenPin 13
 #define bluePin 15
 #define controllerID '1'
+#define analogPin A0
+#define S0 5
+#define S1 4
+#define S2 0
+#define S3 2
 // ----------- VARIABLE DECLATIONS ----------------
 
 // ----------- CONSTANT ----------------
@@ -41,14 +46,26 @@ char msg[50];
 
 int value = 0;
 int light;
+int soilMoisture1;
+int soilMoisture2;
 
 // ----------- FLOATS ----------------
 
 float temp = 0;
 
 // ----------- ARRAYS ----------------
-
-int outputPins[] = {0, 2, 4, 5, 12, 13, 15};
+/*
+0  -- D3 -- Temp Sensor 
+2  -- D4 -- EMPTY
+4  -- D2 -- SDA -- OLED -- RTC
+5  -- D1 -- SCL -- OLED -- RTC
+12 -- D6 -- S1 
+13 -- D7 -- S2
+14 -- D5 -- S0
+15 -- D8 -- S3
+*/
+int outputPins[] = {0, 4, 5, 12, 13, 14, 15};
+int controlPins[4] = {14, 12, 13, 15};
 
 // ----------- INSTANCES ----------------
 
@@ -86,6 +103,11 @@ int setOutputMode(int outputPins[])
   }
   return 0;
 }
+int updatePinStatus(char Pin, int status)
+{
+  client.publish("outTopic/pinStatus", PackIntData(status, lightchar));
+  return 0;
+}
 
 int togglePins(String payload)
 {
@@ -99,22 +121,13 @@ int togglePins(String payload)
     {
       digitalWrite(payload[1],LOW);
       updatePinStatus((char)payload[1],0);
-
     }
-    
   }
   return 0;
 }
 
-int updatePinStatus(char Pin, int status)
-{
-  String Topic1 = "outTopic/" + (String)Pin + "status";
-  
-  client.publish((String)Topic1, PackFloatData(status, lightchar));
 
-  
-  return 0;
-}
+
 int getTemp()
 {
   dht.humidity().getEvent(&event);
@@ -129,27 +142,44 @@ int getTemp()
   return 0;
 }
 
-int getLight()
-{
-  light = analogRead(A0);
-  Serial.print("Publish Light: ");
-  Serial.println(light);
-  client.publish("outTopic/Light", PackIntData(light, lightchar));
-  return 0;
-}
-
-int getMoisture1()
-{
-  return 0;
-}
-
-int getMoisture2()
-{
-  return 0;
-}
-
 int getDateTime()
 {
+  return 0;
+}
+
+int getMultiplexData()
+{
+  for(int i = 0; i < 3; i++){
+    if (i == 0){
+      for (int j = 0; j < 4; j++)
+      {
+        digitalWrite(controlPins[j], LOW);
+      }
+      soilMoisture1 = analogRead(analogPin);
+      client.publish("outTopic/SM1", PackIntData(soilMoisture1, lightchar));
+    }
+    else if (i == 1){
+      digitalWrite(S0, HIGH);
+      for (int j = 1; j < 4; j++)
+      {
+        digitalWrite(controlPins[j], LOW);
+      }
+      soilMoisture2 = analogRead(analogPin);
+      client.publish("outTopic/SM2", PackIntData(soilMoisture2, lightchar));
+    }
+    else if (i == 2){
+      digitalWrite(S1, HIGH);
+      for (int j = 0; j < 4; j++)
+      {
+        if (j != 1){
+          digitalWrite(controlPins[j], LOW);
+        }
+      }
+      light = analogRead(analogPin);
+      client.publish("outTopic/Light", PackIntData(light, lightchar));
+    }
+    delay(250);
+  }
   return 0;
 }
 
@@ -245,7 +275,7 @@ void callback(char *topic, byte *payload, unsigned int length)
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
-  for (int i = 0; i < length; i++)
+  for (int i = 0; i < (int)length; i++)
   {
     Serial.print((char)payload[i]);
   }
@@ -290,18 +320,14 @@ void loop()
   }
 
   client.loop();
-  int before = 0;
+  //int before = 0;
   long now = millis();
 
   if (now - lastMsg > 1000)
-  {
-
     lastMsg = now;
     getTemp();
-    getLight();
-    getMoisture1();
-    getMoisture2();
     getDateTime();
+    getMultiplexData();
     getIR();
   }
 }

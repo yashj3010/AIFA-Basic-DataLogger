@@ -192,7 +192,7 @@ int getMultiplexData()
       Serial.println(light);
       client.publish("outTopic/Light", PackIntData(light, lightchar));
     }
-    delay(250);
+    delay(1000);
   }
   return 0;
 }
@@ -333,7 +333,7 @@ void loop()
   //int before = 0;
   long now = millis();
 
-  if (now - lastMsg > 1000)
+  if (now - lastMsg > 5000)
   {
     lastMsg = now;
     getTemp();

@@ -148,10 +148,21 @@ int getTemp()
 
 int getDateTime()
 {
-  String currentTimeStamp = rtc.now().toString("ddMMyyyy");
-  Serial.println(F("currentTimeStamp: "));
-  Serial.println(currentTimeStamp);
-  client.publish("outTopic/Datetime", PackStringData((String)currentTimeStamp,lightchar));
+  DateTime currentTimeStamp = rtc.now();
+    Serial.print(currentTimeStamp.year(), DEC);
+    Serial.print('/');
+    Serial.print(currentTimeStamp.month(), DEC);
+    Serial.print('/');
+    Serial.print(currentTimeStamp.day(), DEC);
+    Serial.print(" (");
+    Serial.print(") ");
+    Serial.print(currentTimeStamp.hour(), DEC);
+    Serial.print(':');
+    Serial.print(currentTimeStamp.minute(), DEC);
+    Serial.print(':');
+    Serial.print(currentTimeStamp.second(), DEC);
+    Serial.println();
+  //client.publish("outTopic/Datetime", PackStringData((String)currentTimeStamp,lightchar));
 }
 
 int getMultiplexData()
@@ -192,7 +203,7 @@ int getMultiplexData()
       Serial.println(light);
       client.publish("outTopic/Light", PackIntData(light, lightchar));
     }
-    delay(250);
+    delay(1000);
   }
   return 0;
 }

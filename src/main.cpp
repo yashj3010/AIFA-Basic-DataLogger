@@ -7,6 +7,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <SPI.h>
+#include <Wire.h>
 #include "RTClib.h"
 
 // ----------- DEFINES ----------------
@@ -148,21 +149,10 @@ int getTemp()
 
 int getDateTime()
 {
-  DateTime currentTimeStamp = rtc.now();
-    Serial.print(currentTimeStamp.year(), DEC);
-    Serial.print('/');
-    Serial.print(currentTimeStamp.month(), DEC);
-    Serial.print('/');
-    Serial.print(currentTimeStamp.day(), DEC);
-    Serial.print(" (");
-    Serial.print(") ");
-    Serial.print(currentTimeStamp.hour(), DEC);
-    Serial.print(':');
-    Serial.print(currentTimeStamp.minute(), DEC);
-    Serial.print(':');
-    Serial.print(currentTimeStamp.second(), DEC);
-    Serial.println();
-  //client.publish("outTopic/Datetime", PackStringData((String)currentTimeStamp,lightchar));
+ DateTime time = rtc.now();
+ Serial.println(String("DateTime::TIMESTAMP_DATE:\t")+time.timestamp(DateTime::TIMESTAMP_DATE));
+ Serial.println(String("DateTime::TIMESTAMP_TIME:\t")+time.timestamp(DateTime::TIMESTAMP_TIME));
+ Serial.println("\n");
 }
 
 int getMultiplexData()
@@ -294,7 +284,16 @@ void setup()
   // Starting Serial Monitor
   Serial.begin(115200);
   Serial.println("Started");
+   if (! rtc.begin()) {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+    abort();
+  }
 
+  if (! rtc.isrunning()) {
+    Serial.println("RTC is NOT running, let's set the time!");
+    rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  }
   // Sensor Init
   dht.begin();
   sensor_t sensor;

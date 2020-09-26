@@ -7,6 +7,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <SPI.h>
+#include "RTClib.h"
 
 // ----------- DEFINES ----------------
 #define DHTPIN 2
@@ -71,6 +72,7 @@ PubSubClient client(espClient);
 DHT_Unified dht(DHTPIN, DHTTYPE);
 uint32_t delayMS;
 sensors_event_t event;
+RTC_DS1307 rtc;
 
 
 // ----------- HELPER FUNCTIONS ----------------
@@ -83,6 +85,12 @@ char *PackIntData(int a, char b[])
 }
 
 char *PackFloatData(float a, char b[])
+{
+  String pubString = String(a);
+  pubString.toCharArray(b, pubString.length() + 1);
+  return b;
+}
+char *PackStringData(String a, char b[])
 {
   String pubString = String(a);
   pubString.toCharArray(b, pubString.length() + 1);
@@ -140,7 +148,8 @@ int getTemp()
 
 int getDateTime()
 {
-  return 0;
+   String currentTimeStamp = rtc.now().toString("ddMMyyyy");
+   client.publish("outTopic/Datetime", PackStringData((String)currentTimeStamp,lightchar));
 }
 
 int getMultiplexData()

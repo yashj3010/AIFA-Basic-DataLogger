@@ -7,6 +7,7 @@
 #include <DHT.h>
 #include <DHT_U.h>
 #include <SPI.h>
+#include "RTClib.h"
 
 // ----------- DEFINES ----------------
 #define DHTPIN 2
@@ -17,10 +18,10 @@
 #define bluePin 15
 #define controllerID '1'
 #define analogPin A0
-#define S0 5
-#define S1 4
-#define S2 0
-#define S3 2
+#define S0 14
+#define S1 12
+#define S2 13
+#define S3 15
 // ----------- VARIABLE DECLATIONS ----------------
 
 // ----------- CONSTANT ----------------
@@ -71,6 +72,7 @@ PubSubClient client(espClient);
 DHT_Unified dht(DHTPIN, DHTTYPE);
 uint32_t delayMS;
 sensors_event_t event;
+RTC_DS1307 rtc;
 
 
 // ----------- HELPER FUNCTIONS ----------------
@@ -83,6 +85,12 @@ char *PackIntData(int a, char b[])
 }
 
 char *PackFloatData(float a, char b[])
+{
+  String pubString = String(a);
+  pubString.toCharArray(b, pubString.length() + 1);
+  return b;
+}
+char *PackStringData(String a, char b[])
 {
   String pubString = String(a);
   pubString.toCharArray(b, pubString.length() + 1);
@@ -125,24 +133,25 @@ int togglePins(String payload)
 int getTemp()
 {
   dht.humidity().getEvent(&event);
-  Serial.print(F("Humidity: "));
-  Serial.print(event.relative_humidity);
+  Serial.println(F("Humidity: "));
+  Serial.println(event.relative_humidity);
   Serial.println(F("%"));
   client.publish("outTopic/Humidity", PackFloatData(event.relative_humidity, lightchar));
 
   dht.temperature().getEvent(&event);
-  Serial.print(F("temperature: "));
-  Serial.print(event.temperature);
+  Serial.println(F("temperature: "));
+  Serial.println(event.temperature);
   Serial.println(F("C"));
   client.publish("outTopic/Temp", PackFloatData(event.temperature, lightchar));
   return 0;
-
-  
 }
 
 int getDateTime()
 {
-  return 0;
+  String currentTimeStamp = rtc.now().toString("ddMMyyyy");
+  Serial.println(F("currentTimeStamp: "));
+  Serial.println(currentTimeStamp);
+  client.publish("outTopic/Datetime", PackStringData((String)currentTimeStamp,lightchar));
 }
 
 int getMultiplexData()
@@ -154,8 +163,8 @@ int getMultiplexData()
         digitalWrite(controlPins[j], LOW);
       }
       soilMoisture1 = analogRead(analogPin);
-      Serial.print(F("soilMoisture1: "));
-      Serial.print(soilMoisture1);
+      Serial.println(F("soilMoisture1: "));
+      Serial.println(soilMoisture1);
       client.publish("outTopic/SM1", PackIntData(soilMoisture1, lightchar));
     }
     else if (i == 1){
@@ -165,8 +174,8 @@ int getMultiplexData()
         digitalWrite(controlPins[j], LOW);
       }
       soilMoisture2 = analogRead(analogPin);
-      Serial.print(F("soilMoisture2: "));
-      Serial.print(soilMoisture2);
+      Serial.println(F("soilMoisture2: "));
+      Serial.println(soilMoisture2);
       client.publish("outTopic/SM2", PackIntData(soilMoisture2, lightchar));
     }
     else if (i == 2){
@@ -179,8 +188,8 @@ int getMultiplexData()
     
       }
       light = analogRead(analogPin);
-      Serial.print(F("light: "));
-      Serial.print(light);
+      Serial.println(F("light: "));
+      Serial.println(light);
       client.publish("outTopic/Light", PackIntData(light, lightchar));
     }
     delay(250);
@@ -199,7 +208,7 @@ int setup_wifi()
   delay(10);
   // We start by connecti ng to a WiFi network
   Serial.println();
-  Serial.print("Connecting to ");
+  Serial.println("Connecting to ");
   Serial.println(ssid);
 
   WiFi.begin(ssid, password);
@@ -207,7 +216,7 @@ int setup_wifi()
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(500);
-    Serial.print(".");
+    Serial.println(".");
 
     return 0;
   }
@@ -227,7 +236,7 @@ void reconnect()
   // Loop until we're reconnected
   while (!client.connected())
   {
-    Serial.print("Attempting MQTT connection...");
+    Serial.println("Attempting MQTT connection...");
     // Create a random client ID
     String clientId = "ESP8266Client-";
     clientId += String(random(0xffff), HEX);
@@ -242,8 +251,8 @@ void reconnect()
     }
     else
     {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
+      Serial.println("failed, rc=");
+      Serial.println(client.state());
       Serial.println(" try again in 5 seconds");
       // Wait 5 seconds before retrying
     }
@@ -254,12 +263,12 @@ void reconnect()
 
 void callback(char *topic, byte *payload, unsigned int length)
 {
-  Serial.print("Message arrived [");
-  Serial.print(topic);
-  Serial.print("] ");
+  Serial.println("Message arrived [");
+  Serial.println(topic);
+  Serial.println("] ");
   for (int i = 0; i < (int)length; i++)
   {
-    Serial.print((char)payload[i]);
+    Serial.println((char)payload[i]);
   }
 
   if (strcmp(topic, "inTopic") == 0)
@@ -286,7 +295,7 @@ void setup()
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
-  Serial.print("Connecting to ");
+  Serial.println("Connecting to ");
   Serial.println(ssid);
 
   WiFi.mode(WIFI_STA);
@@ -294,7 +303,7 @@ void setup()
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
-    Serial.print(".");
+    Serial.println(".");
   }
 
   randomSeed(micros());
@@ -324,11 +333,11 @@ void loop()
   //int before = 0;
   long now = millis();
 
-  if (now - lastMsg > 5000)
+  if (now - lastMsg > 1000)
   {
     lastMsg = now;
     getTemp();
     getDateTime();
     getMultiplexData();
   }
-}                                                                                                                                                                                                                                                                                                                                                                                                                                                             
+}

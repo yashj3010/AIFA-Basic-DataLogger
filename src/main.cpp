@@ -333,7 +333,7 @@ void loop()
   //int before = 0;
   long now = millis();
 
-  if (now - lastMsg > 1000)
+  if (now - lastMsg > 5000)
   {
     lastMsg = now;
     getTemp();

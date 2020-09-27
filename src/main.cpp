@@ -37,7 +37,7 @@ long lastMsg = 0;
 long duration, distance;
 
 // ----------- CHAR ----------------
-char lightchar[50];
+char lightchar[200];
 char distanceChar[50];
 char msg[50];
 
@@ -51,6 +51,16 @@ int soilMoisture2;
 // ----------- FLOATS ----------------
 
 float temp = 0;
+// ----------- STRING ----------------
+
+String csvData;
+String timeStamp;
+String date;
+String tempStr;
+String humidityStr;
+String SM1Str;
+String SM2Str;
+String lightStr;
 
 // ----------- ARRAYS ----------------
 /*
@@ -64,7 +74,7 @@ float temp = 0;
 15 -- D8 -- S3
 */
 int outputPins[] = {0, 4, 5, 12, 13, 14, 15};
-int controlPins[4] = {14, 12, 13, 15};
+int controlPins[4] = {S0, S1, S2, S3};
 
 // ----------- INSTANCES ----------------
 
@@ -135,24 +145,29 @@ int getTemp()
 {
   dht.humidity().getEvent(&event);
   Serial.println(F("Humidity: "));
-  Serial.println(event.relative_humidity);
-  Serial.println(F("%"));
+  Serial.print(event.relative_humidity);
   client.publish("outTopic/Humidity", PackFloatData(event.relative_humidity, lightchar));
+  tempStr = String(event.relative_humidity);
 
   dht.temperature().getEvent(&event);
   Serial.println(F("temperature: "));
-  Serial.println(event.temperature);
-  Serial.println(F("C"));
+  Serial.print(event.temperature);
   client.publish("outTopic/Temp", PackFloatData(event.temperature, lightchar));
+  humidityStr = String(event.temperature);
+
   return 0;
 }
 
 int getDateTime()
 {
  DateTime time = rtc.now();
- Serial.println(String("DateTime::TIMESTAMP_DATE:\t")+time.timestamp(DateTime::TIMESTAMP_DATE));
- Serial.println(String("DateTime::TIMESTAMP_TIME:\t")+time.timestamp(DateTime::TIMESTAMP_TIME));
- Serial.println("\n");
+ date = String(time.timestamp(DateTime::TIMESTAMP_DATE));
+ timeStamp = String(time.timestamp(DateTime::TIMESTAMP_TIME));
+ Serial.println(timeStamp);
+ Serial.println(date);
+
+ client.publish("outTopic/Date", PackStringData(date, lightchar));
+ client.publish("outTopic/Time", PackStringData(timeStamp, lightchar));
 }
 
 int getMultiplexData()
@@ -167,6 +182,7 @@ int getMultiplexData()
       Serial.println(F("soilMoisture1: "));
       Serial.println(soilMoisture1);
       client.publish("outTopic/SM1", PackIntData(soilMoisture1, lightchar));
+      SM1Str = String(soilMoisture1);
     }
     else if (i == 1){
       digitalWrite(S0, HIGH);
@@ -178,6 +194,8 @@ int getMultiplexData()
       Serial.println(F("soilMoisture2: "));
       Serial.println(soilMoisture2);
       client.publish("outTopic/SM2", PackIntData(soilMoisture2, lightchar));
+      SM1Str = String(soilMoisture2);
+
     }
     else if (i == 2){
       digitalWrite(S1, HIGH);
@@ -192,6 +210,8 @@ int getMultiplexData()
       Serial.println(F("light: "));
       Serial.println(light);
       client.publish("outTopic/Light", PackIntData(light, lightchar));
+      lightStr = String(light);
+      
     }
     delay(1000);
   }
@@ -200,6 +220,15 @@ int getMultiplexData()
 
 int logData()
 {
+  getTemp();
+  getDateTime();
+  getMultiplexData();
+
+  csvData = date + timeStamp + tempStr + humidityStr + SM1Str + SM2Str + lightStr;
+  Serial.println("csvData:");
+  Serial.print(csvData);
+  client.publish("outTopic/csvData", PackStringData(csvData, lightchar));
+
   return 0;
 }
 
@@ -346,8 +375,6 @@ void loop()
   if (now - lastMsg > 5000)
   {
     lastMsg = now;
-    getTemp();
-    getDateTime();
-    getMultiplexData();
+    logData();
   }
 }

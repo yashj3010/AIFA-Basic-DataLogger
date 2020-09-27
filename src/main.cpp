@@ -372,7 +372,7 @@ void loop()
   //int before = 0;
   long now = millis();
 
-  if (now - lastMsg > 5000)
+  if (now - lastMsg > 2000)
   {
     lastMsg = now;
     logData();

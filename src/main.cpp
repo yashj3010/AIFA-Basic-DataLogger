@@ -11,18 +11,15 @@
 #include "RTClib.h"
 
 // ----------- DEFINES ----------------
-#define DHTPIN 2
+#define DHTPIN 0
 #define DHTTYPE DHT11
-#define LedYello 0
-#define redPin 12
-#define greenPin 13
-#define bluePin 15
 #define controllerID '1'
 #define analogPin A0
 #define S0 14
 #define S1 12
 #define S2 13
 #define S3 15
+#define statusLed 2
 // ----------- VARIABLE DECLATIONS ----------------
 
 // ----------- CONSTANT ----------------
@@ -50,7 +47,7 @@ int soilMoisture2;
 
 // ----------- FLOATS ----------------
 
-float temp = 0;
+float temporaary = 0;
 // ----------- STRING ----------------
 
 String csvData;
@@ -65,7 +62,7 @@ String lightStr;
 // ----------- ARRAYS ----------------
 /*
 0  -- D3 -- Temp Sensor 
-2  -- D4 -- EMPTY
+2  -- D4 -- Status Led
 4  -- D2 -- SDA -- OLED -- RTC
 5  -- D1 -- SCL -- OLED -- RTC
 12 -- D6 -- S1 
@@ -73,7 +70,7 @@ String lightStr;
 14 -- D5 -- S0
 15 -- D8 -- S3
 */
-int outputPins[] = {0, 4, 5, 12, 13, 14, 15};
+int outputPins[] = {0,2, 4, 5, 12, 13, 14, 15};
 int controlPins[4] = {S0, S1, S2, S3};
 
 // ----------- INSTANCES ----------------
@@ -143,6 +140,7 @@ int togglePins(String payload)
 
 int getTemp()
 {
+  digitalWrite(statusLed, HIGH);
   dht.humidity().getEvent(&event);
   Serial.println(F("Humidity: "));
   Serial.print(event.relative_humidity);
@@ -179,7 +177,7 @@ int getMultiplexData()
         digitalWrite(controlPins[j], LOW);
       }
       soilMoisture1 = analogRead(analogPin);
-      Serial.println(F("soilMoisture1: "));
+      Serial.println(F("soilMoisture1:"));
       Serial.println(soilMoisture1);
       client.publish("outTopic/SM1", PackIntData(soilMoisture1, lightchar));
       SM1Str = String(soilMoisture1);
@@ -191,7 +189,7 @@ int getMultiplexData()
         digitalWrite(controlPins[j], LOW);
       }
       soilMoisture2 = analogRead(analogPin);
-      Serial.println(F("soilMoisture2: "));
+      Serial.println(F("soilMoisture2:"));
       Serial.println(soilMoisture2);
       client.publish("outTopic/SM2", PackIntData(soilMoisture2, lightchar));
       SM1Str = String(soilMoisture2);
@@ -207,7 +205,7 @@ int getMultiplexData()
     
       }
       light = analogRead(analogPin);
-      Serial.println(F("light: "));
+      Serial.println(F("light:"));
       Serial.println(light);
       client.publish("outTopic/Light", PackIntData(light, lightchar));
       lightStr = String(light);
@@ -228,7 +226,7 @@ int logData()
   Serial.println("csvData:");
   Serial.print(csvData);
   client.publish("outTopic/csvData", PackStringData(csvData, lightchar));
-
+  digitalWrite(statusLed, LOW);
   return 0;
 }
 
@@ -376,5 +374,10 @@ void loop()
   {
     lastMsg = now;
     logData();
+  }
+  else{
+    digitalWrite(statusLed, HIGH);
+    delay(1000);
+    digitalWrite(statusLed, LOW);
   }
 }

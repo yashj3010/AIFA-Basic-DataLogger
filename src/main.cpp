@@ -172,34 +172,55 @@ int getDateTime()
  client.publish("outTopic/Time", PackStringData(timeStamp, lightchar));
 }
 
-void getMoisture2(){
-
-    digitalWrite(s0, HIGH);
-    digitalWrite(s1, LOW);
-    digitalWrite(s2, LOW);
-    digitalWrite(s3, LOW);
-
-    soilMoisture2 = analogRead(analogInput);
-    Serial.print("Soil Moisture 2:");
-    Serial.print(soilMoisture2);
-    Serial.print("\n");
-    }
 void getMoisture1(){
     digitalWrite(s0, LOW);
     digitalWrite(s1, LOW);
     digitalWrite(s2, LOW);
     digitalWrite(s3, LOW);
     soilMoisture1 = analogRead(analogInput);
+    SM1Str = (String)soilMoisture1;
     Serial.print("Soil Moisture 1:");
     Serial.print(soilMoisture1);
     Serial.print("\n");
-    }
+    client.publish("outTopic/SM1", PackStringData(SM1Str, lightchar));
+}
+
+void getMoisture2(){
+    digitalWrite(s0, HIGH);
+    digitalWrite(s1, LOW);
+    digitalWrite(s2, LOW);
+    digitalWrite(s3, LOW);
+
+    soilMoisture2 = analogRead(analogInput);
+    SM2Str = (String)soilMoisture2;
+    Serial.print("Soil Moisture 2:");
+    Serial.print(soilMoisture2);
+    Serial.print("\n");
+    client.publish("outTopic/SM2", PackStringData(SM2Str, lightchar));
+}
+void getLight(){
+    digitalWrite(s0, LOW);
+    digitalWrite(s1, HIGH);
+    digitalWrite(s2, LOW);
+    digitalWrite(s3, LOW);
+
+    light = analogRead(analogInput);
+    lightStr = (String)light;
+    Serial.print("Light:");
+    Serial.print(light);
+    Serial.print("\n");
+    client.publish("outTopic/Light", PackStringData(lightStr, lightchar));
+}
 
 int logData()
 {
+  getMoisture2();
+  delay(5000);
+  getMoisture1();
   getTemp();
   getDateTime();
-  csvData = date + timeStamp + tempStr + humidityStr + SM1Str + SM2Str + lightStr;
+  getLight();
+  csvData = date+ "," + timeStamp + "," + tempStr + "," + humidityStr + "," + SM1Str + "," + SM2Str + "," + lightStr;
   Serial.print("csvData:");
   Serial.print(csvData);
   Serial.print("\n");
@@ -342,10 +363,6 @@ void setup()
 
 void loop()
 {
-  getMoisture2();
-  delay(5000);
-  getMoisture1();
-
   if (!client.connected())
   {
     Serial.println("wifi Connected");

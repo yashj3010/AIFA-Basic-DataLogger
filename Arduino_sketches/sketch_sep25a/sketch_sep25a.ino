@@ -42,8 +42,8 @@ char msg[50];
 
 int value = 0;
 int light= 0;
-int soilMoisture1;
-int soilMoisture2;
+int soilMoisture1 = 0;
+int soilMoisture2 = 0;
 
 // ----------- FLOATS ----------------
 
@@ -142,14 +142,16 @@ int getTemp()
 {
   digitalWrite(statusLed, HIGH);
   dht.humidity().getEvent(&event);
-  Serial.println(F("Humidity: "));
+  Serial.print(F("Humidity: "));
   Serial.print(event.relative_humidity);
+  Serial.print("\n");
   client.publish("outTopic/Humidity", PackFloatData(event.relative_humidity, lightchar));
   tempStr = String(event.relative_humidity);
 
   dht.temperature().getEvent(&event);
-  Serial.println(F("temperature: "));
+  Serial.print(F("temperature: "));
   Serial.print(event.temperature);
+  Serial.print("\n");
   client.publish("outTopic/Temp", PackFloatData(event.temperature, lightchar));
   humidityStr = String(event.temperature);
 
@@ -161,11 +163,26 @@ int getDateTime()
  DateTime time = rtc.now();
  date = String(time.timestamp(DateTime::TIMESTAMP_DATE));
  timeStamp = String(time.timestamp(DateTime::TIMESTAMP_TIME));
- Serial.println(timeStamp);
- Serial.println(date);
+ Serial.print(timeStamp);
+ Serial.print(date);
+ Serial.print("\n");
+
 
  client.publish("outTopic/Date", PackStringData(date, lightchar));
  client.publish("outTopic/Time", PackStringData(timeStamp, lightchar));
+}
+
+void getMoisture1(){
+    digitalWrite(s0, LOW);
+    digitalWrite(s1, LOW);
+    digitalWrite(s2, LOW);
+    digitalWrite(s3, LOW);
+    soilMoisture1 = analogRead(analogInput);
+    SM1Str = (String)soilMoisture1;
+    Serial.print("Soil Moisture 1:");
+    Serial.print(soilMoisture1);
+    Serial.print("\n");
+    client.publish("outTopic/SM1", PackStringData(SM1Str, lightchar));
 }
 
 void getMoisture2(){
@@ -173,28 +190,40 @@ void getMoisture2(){
     digitalWrite(s1, LOW);
     digitalWrite(s2, LOW);
     digitalWrite(s3, LOW);
+
     soilMoisture2 = analogRead(analogInput);
-    Serial.println("Soil Moisture 2:");
-    Serial.println(soilMoisture2);
-    }
-void getMoisture1(){
+    SM2Str = (String)soilMoisture2;
+    Serial.print("Soil Moisture 2:");
+    Serial.print(soilMoisture2);
+    Serial.print("\n");
+    client.publish("outTopic/SM2", PackStringData(SM2Str, lightchar));
+}
+void getLight(){
     digitalWrite(s0, LOW);
-    digitalWrite(s1, LOW);
+    digitalWrite(s1, HIGH);
     digitalWrite(s2, LOW);
     digitalWrite(s3, LOW);
-    soilMoisture1 = analogRead(analogInput);
-    Serial.println("Soil Moisture 1:");
-    Serial.println(soilMoisture1);
-    }
+
+    light = analogRead(analogInput);
+    lightStr = (String)light;
+    Serial.print("Light:");
+    Serial.print(light);
+    Serial.print("\n");
+    client.publish("outTopic/Light", PackStringData(lightStr, lightchar));
+}
 
 int logData()
 {
+  getMoisture2();
+  //delay(5000);
+  getMoisture1();
   getTemp();
   getDateTime();
-
-  csvData = date + timeStamp + tempStr + humidityStr + SM1Str + SM2Str + lightStr;
-  Serial.println("csvData:");
+  getLight();
+  csvData = date+ "," + timeStamp + "," + tempStr + "," + humidityStr + "," + SM1Str + "," + SM2Str + "," + lightStr;
+  Serial.print("csvData:");
   Serial.print(csvData);
+  Serial.print("\n");
   client.publish("outTopic/csvData", PackStringData(csvData, lightchar));
   digitalWrite(statusLed, LOW);
   return 0;
@@ -334,10 +363,6 @@ void setup()
 
 void loop()
 {
-  getMoisture2();
-  delay(5000);
-  getMoisture1();
-
   if (!client.connected())
   {
     Serial.println("wifi Connected");

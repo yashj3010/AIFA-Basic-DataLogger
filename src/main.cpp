@@ -199,7 +199,6 @@ int logData()
 {
   getTemp();
   getDateTime();
-
   csvData = date + timeStamp + tempStr + humidityStr + SM1Str + SM2Str + lightStr;
   Serial.print("csvData:");
   Serial.print(csvData);

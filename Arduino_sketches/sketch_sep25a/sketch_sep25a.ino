@@ -11,18 +11,15 @@
 #include "RTClib.h"
 
 // ----------- DEFINES ----------------
-#define DHTPIN 2
+#define DHTPIN 0
 #define DHTTYPE DHT11
-#define LedYello 0
-#define redPin 12
-#define greenPin 13
-#define bluePin 15
 #define controllerID '1'
-#define analogPin A0
-#define S0 14
-#define S1 12
-#define S2 13
-#define S3 15
+#define analogInput A0
+#define s0 14
+#define s1 12
+#define s2 13
+#define s3 15
+#define statusLed 2
 // ----------- VARIABLE DECLATIONS ----------------
 
 // ----------- CONSTANT ----------------
@@ -37,25 +34,35 @@ long lastMsg = 0;
 long duration, distance;
 
 // ----------- CHAR ----------------
-char lightchar[50];
+char lightchar[200];
 char distanceChar[50];
 char msg[50];
 
 // ----------- INTEGERS ----------------
 
 int value = 0;
-int light;
+int light= 0;
 int soilMoisture1;
 int soilMoisture2;
 
 // ----------- FLOATS ----------------
 
-float temp = 0;
+float temporaary = 0;
+// ----------- STRING ----------------
+
+String csvData;
+String timeStamp;
+String date;
+String tempStr;
+String humidityStr;
+String SM1Str;
+String SM2Str;
+String lightStr;
 
 // ----------- ARRAYS ----------------
 /*
 0  -- D3 -- Temp Sensor 
-2  -- D4 -- EMPTY
+2  -- D4 -- Status Led
 4  -- D2 -- SDA -- OLED -- RTC
 5  -- D1 -- SCL -- OLED -- RTC
 12 -- D6 -- S1 
@@ -63,8 +70,8 @@ float temp = 0;
 14 -- D5 -- S0
 15 -- D8 -- S3
 */
-int outputPins[] = {0, 4, 5, 12, 13, 14, 15};
-int controlPins[4] = {14, 12, 13, 15};
+int outputPins[] = {0,2, 4, 5, 12, 13, 14, 15};
+int controlPins[4] = {s0, s1, s2, s3};
 
 // ----------- INSTANCES ----------------
 
@@ -133,73 +140,63 @@ int togglePins(String payload)
 
 int getTemp()
 {
+  digitalWrite(statusLed, HIGH);
   dht.humidity().getEvent(&event);
   Serial.println(F("Humidity: "));
-  Serial.println(event.relative_humidity);
-  Serial.println(F("%"));
+  Serial.print(event.relative_humidity);
   client.publish("outTopic/Humidity", PackFloatData(event.relative_humidity, lightchar));
+  tempStr = String(event.relative_humidity);
 
   dht.temperature().getEvent(&event);
   Serial.println(F("temperature: "));
-  Serial.println(event.temperature);
-  Serial.println(F("C"));
+  Serial.print(event.temperature);
   client.publish("outTopic/Temp", PackFloatData(event.temperature, lightchar));
+  humidityStr = String(event.temperature);
+
   return 0;
 }
 
 int getDateTime()
 {
  DateTime time = rtc.now();
- Serial.println(String("DateTime::TIMESTAMP_DATE:\t")+time.timestamp(DateTime::TIMESTAMP_DATE));
- Serial.println(String("DateTime::TIMESTAMP_TIME:\t")+time.timestamp(DateTime::TIMESTAMP_TIME));
- Serial.println("\n");
+ date = String(time.timestamp(DateTime::TIMESTAMP_DATE));
+ timeStamp = String(time.timestamp(DateTime::TIMESTAMP_TIME));
+ Serial.println(timeStamp);
+ Serial.println(date);
+
+ client.publish("outTopic/Date", PackStringData(date, lightchar));
+ client.publish("outTopic/Time", PackStringData(timeStamp, lightchar));
 }
 
-int getMultiplexData()
-{
-  for(int i = 0; i < 3; i++){
-    if (i == 0){
-      for (int j = 0; j < 4; j++)
-      {
-        digitalWrite(controlPins[j], LOW);
-      }
-      soilMoisture1 = analogRead(analogPin);
-      Serial.println(F("soilMoisture1: "));
-      Serial.println(soilMoisture1);
-      client.publish("outTopic/SM1", PackIntData(soilMoisture1, lightchar));
+void getMoisture2(){
+    digitalWrite(s0, HIGH);
+    digitalWrite(s1, LOW);
+    digitalWrite(s2, LOW);
+    digitalWrite(s3, LOW);
+    soilMoisture2 = analogRead(analogInput);
+    Serial.println("Soil Moisture 2:");
+    Serial.println(soilMoisture2);
     }
-    else if (i == 1){
-      digitalWrite(S0, HIGH);
-      for (int j = 1; j < 4; j++)
-      {
-        digitalWrite(controlPins[j], LOW);
-      }
-      soilMoisture2 = analogRead(analogPin);
-      Serial.println(F("soilMoisture2: "));
-      Serial.println(soilMoisture2);
-      client.publish("outTopic/SM2", PackIntData(soilMoisture2, lightchar));
+void getMoisture1(){
+    digitalWrite(s0, LOW);
+    digitalWrite(s1, LOW);
+    digitalWrite(s2, LOW);
+    digitalWrite(s3, LOW);
+    soilMoisture1 = analogRead(analogInput);
+    Serial.println("Soil Moisture 1:");
+    Serial.println(soilMoisture1);
     }
-    else if (i == 2){
-      digitalWrite(S1, HIGH);
-      for (int j = 0; j < 4; j++)
-      {
-        if (j != 1){
-          digitalWrite(controlPins[j], LOW);
-        }
-    
-      }
-      light = analogRead(analogPin);
-      Serial.println(F("light: "));
-      Serial.println(light);
-      client.publish("outTopic/Light", PackIntData(light, lightchar));
-    }
-    delay(1000);
-  }
-  return 0;
-}
 
 int logData()
 {
+  getTemp();
+  getDateTime();
+
+  csvData = date + timeStamp + tempStr + humidityStr + SM1Str + SM2Str + lightStr;
+  Serial.println("csvData:");
+  Serial.print(csvData);
+  client.publish("outTopic/csvData", PackStringData(csvData, lightchar));
+  digitalWrite(statusLed, LOW);
   return 0;
 }
 
@@ -280,9 +277,14 @@ void callback(char *topic, byte *payload, unsigned int length)
 
 void setup()
 {
-
+  Serial.begin(9600);
+  pinMode(s0, OUTPUT);
+  pinMode(s1, OUTPUT);
+  pinMode(s2, OUTPUT);
+  pinMode(s3, OUTPUT);// put your setup code here, to run once:
+  pinMode(analogInput, INPUT);
   // Starting Serial Monitor
-  Serial.begin(115200);
+  //Serial.begin(115200);
   Serial.println("Started");
    if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
@@ -332,6 +334,9 @@ void setup()
 
 void loop()
 {
+  getMoisture2();
+  delay(5000);
+  getMoisture1();
 
   if (!client.connected())
   {
@@ -343,11 +348,14 @@ void loop()
   //int before = 0;
   long now = millis();
 
-  if (now - lastMsg > 5000)
+  if (now - lastMsg > 2000)
   {
     lastMsg = now;
-    getTemp();
-    getDateTime();
-    getMultiplexData();
+    logData();
+  }
+  else{
+    digitalWrite(statusLed, HIGH);
+    delay(1000);
+    digitalWrite(statusLed, LOW);
   }
 }

@@ -9,6 +9,9 @@
 #include <SPI.h>
 #include <Wire.h>
 #include "RTClib.h"
+#include <Wire.h>
+#include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
+
 
 // ----------- DEFINES ----------------
 #define DHTPIN 0
@@ -81,7 +84,7 @@ DHT_Unified dht(DHTPIN, DHTTYPE);
 uint32_t delayMS;
 sensors_event_t event;
 RTC_DS1307 rtc;
-
+SSD1306  display(0x3c, 4, 5);
 
 // ----------- HELPER FUNCTIONS ----------------
 
@@ -146,14 +149,14 @@ int getTemp()
   Serial.print(event.relative_humidity);
   Serial.print("\n");
   client.publish("outTopic/Humidity", PackFloatData(event.relative_humidity, lightchar));
-  tempStr = String(event.relative_humidity);
+  humidityStr = String(event.relative_humidity);
 
   dht.temperature().getEvent(&event);
   Serial.print(F("temperature: "));
   Serial.print(event.temperature);
   Serial.print("\n");
   client.publish("outTopic/Temp", PackFloatData(event.temperature, lightchar));
-  humidityStr = String(event.temperature);
+  tempStr = String(event.temperature);
 
   return 0;
 }
@@ -212,10 +215,43 @@ void getLight(){
     client.publish("outTopic/Light", PackStringData(lightStr, lightchar));
 }
 
+int displayOled()
+{
+  // csvData = date+ "," + timeStamp + "," + tempStr + "," + humidityStr + "," + SM1Str + "," + SM2Str + "," + lightStr;
+  display.clear();
+
+  display.setTextAlignment(TEXT_ALIGN_LEFT);
+  display.setFont(ArialMT_Plain_16);
+
+  display.drawString(0, 0,date);//
+  display.drawString(0, 14, timeStamp);
+
+  display.drawString(0, 28, "tempe:");
+  display.drawString(63, 28, tempStr);
+
+  display.drawString(0, 41, "humidity: ");
+  display.drawString(63, 41, humidityStr);
+
+  display.display();
+  delay(2000);
+  display.clear();
+
+  display.drawString(0, 0,"SM1:");
+  display.drawString(63, 0,SM1Str);
+
+  display.drawString(0, 14, "SM2:");
+  display.drawString(63, 14, SM2Str);
+
+  display.drawString(0, 28, "Light:");
+  display.drawString(63, 28, lightStr);
+  display.display();
+  delay(2000);
+
+  return 0;
+}
 int logData()
 {
   getMoisture2();
-  delay(5000);
   getMoisture1();
   getTemp();
   getDateTime();
@@ -225,6 +261,7 @@ int logData()
   Serial.print(csvData);
   Serial.print("\n");
   client.publish("outTopic/csvData", PackStringData(csvData, lightchar));
+  displayOled();
   digitalWrite(statusLed, LOW);
   return 0;
 }
@@ -306,19 +343,29 @@ void callback(char *topic, byte *payload, unsigned int length)
 
 void setup()
 {
+  display.drawString(0, 0, "Welcome mofos");
+  display.drawString(0, 14, "Initialising");
+  display.display();
+
+
   Serial.begin(9600);
   pinMode(s0, OUTPUT);
   pinMode(s1, OUTPUT);
   pinMode(s2, OUTPUT);
-  pinMode(s3, OUTPUT);// put your setup code here, to run once:
+  pinMode(s3, OUTPUT);//
   pinMode(analogInput, INPUT);
-  // Starting Serial Monitor
-  //Serial.begin(115200);
+  Wire.pins(4, 5);// 4=sda, 5=scl
+  Wire.begin(4,5);// 4=sda, 5=scl
+  rtc.begin();
   Serial.println("Started");
    if (! rtc.begin()) {
     Serial.println("Couldn't find RTC");
     Serial.flush();
     abort();
+    display.clear();
+    display.drawString(0, 0, "Error");
+    display.drawString(0, 14, "RTC 404");
+    display.display();
   }
 
   if (! rtc.isrunning()) {
@@ -338,7 +385,10 @@ void setup()
   Serial.println();
   Serial.println("Connecting to ");
   Serial.println(ssid);
-
+  display.clear();
+  display.drawString(0, 0, "Connecting");
+  display.drawString(0, 14, (String)ssid);
+  display.display();
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
@@ -353,16 +403,27 @@ void setup()
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  display.clear();
+  display.drawString(0, 0, "WiFi connected");
+  display.display();
 
   // CALLING FUNCTIONS
   setOutputMode(outputPins);
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
+
+  display.init();
+  display.flipScreenVertically();// flipping came in handy for me with regard 
+  display.setFont(ArialMT_Plain_10);
+  display.drawString(0, 0, "Init Complete");
+  display.display();
+  display.clear();
 }
 
 void loop()
 {
+  delay(10);
   if (!client.connected())
   {
     Serial.println("wifi Connected");
@@ -380,6 +441,7 @@ void loop()
   }
   else{
     digitalWrite(statusLed, HIGH);
+    displayOled();
     delay(1000);
     digitalWrite(statusLed, LOW);
   }

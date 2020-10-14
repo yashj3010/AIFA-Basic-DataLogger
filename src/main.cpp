@@ -10,7 +10,11 @@
 #include <Wire.h>
 #include "RTClib.h"
 #include <Wire.h>
-#include "SSD1306.h" // alias for `#include "SSD1306Wire.h"`
+#include "SSD1306.h"
+#include <ESP8266WiFi.h>          
+#include <DNSServer.h>
+#include <ESP8266WebServer.h>
+#include <WiFiManager.h> 
 
 
 // ----------- DEFINES ----------------
@@ -30,16 +34,13 @@
 const char *ssid = "MQTT-Server";
 const char *password = "mqtt@123";
 const char *mqtt_server = "192.168.0.101";
-const uint16_t kRecvPin = 15;
 
 // ----------- LONG ----------------
 long lastMsg = 0;
-long duration, distance;
+
 
 // ----------- CHAR ----------------
 char lightchar[200];
-char distanceChar[50];
-char msg[50];
 
 // ----------- INTEGERS ----------------
 
@@ -343,10 +344,30 @@ void callback(char *topic, byte *payload, unsigned int length)
 
 void setup()
 {
-  display.drawString(0, 0, "Welcome mofos");
+  display.init();
+  display.flipScreenVertically();// flipping came in handy for me with regard 
+  display.setFont(ArialMT_Plain_16);
+  display.drawString(0, 0, "Init Complete");
+  display.display();
+  display.clear();
+
+  display.drawString(0, 0, "Welcome");
   display.drawString(0, 14, "Initialising");
   display.display();
 
+  display.clear();
+  display.drawString(0, 0, "Autoconnect");
+  display.drawString(0, 14, "Initialised");
+  display.display();
+
+  WiFiManager wifiManager;
+  wifiManager.autoConnect("AutoConnectAP");
+  Serial.println("connected...yeey :)");
+
+  display.clear();
+  display.drawString(0, 0, "connected to");
+  display.drawString(0, 14, "Wifi");
+  display.display();
 
   Serial.begin(9600);
   pinMode(s0, OUTPUT);
@@ -413,12 +434,7 @@ void setup()
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
 
-  display.init();
-  display.flipScreenVertically();// flipping came in handy for me with regard 
-  display.setFont(ArialMT_Plain_10);
-  display.drawString(0, 0, "Init Complete");
-  display.display();
-  display.clear();
+
 }
 
 void loop()

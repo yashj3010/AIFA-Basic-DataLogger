@@ -31,8 +31,6 @@
 
 // ----------- CONSTANT ----------------
 
-const char *ssid = "MQTT-Server";
-const char *password = "mqtt@123";
 const char *mqtt_server = "192.168.0.101";
 
 // ----------- LONG ----------------
@@ -179,8 +177,7 @@ int getDateTime()
 void getMoisture1(){
     digitalWrite(s0, LOW);
     digitalWrite(s1, LOW);
-    digitalWrite(s2, LOW);
-    digitalWrite(s3, LOW);
+
     soilMoisture1 = analogRead(analogInput);
     SM1Str = (String)soilMoisture1;
     Serial.print("Soil Moisture 1:");
@@ -192,8 +189,6 @@ void getMoisture1(){
 void getMoisture2(){
     digitalWrite(s0, HIGH);
     digitalWrite(s1, LOW);
-    digitalWrite(s2, LOW);
-    digitalWrite(s3, LOW);
 
     soilMoisture2 = analogRead(analogInput);
     SM2Str = (String)soilMoisture2;
@@ -205,8 +200,6 @@ void getMoisture2(){
 void getLight(){
     digitalWrite(s0, LOW);
     digitalWrite(s1, HIGH);
-    digitalWrite(s2, LOW);
-    digitalWrite(s3, LOW);
 
     light = analogRead(analogInput);
     lightStr = (String)light;
@@ -227,7 +220,7 @@ int displayOled()
   display.drawString(0, 0,date);//
   display.drawString(0, 14, timeStamp);
 
-  display.drawString(0, 28, "tempe:");
+  display.drawString(0, 28, "temp:");
   display.drawString(63, 28, tempStr);
 
   display.drawString(0, 41, "humidity: ");
@@ -236,7 +229,6 @@ int displayOled()
   display.display();
   delay(2000);
   display.clear();
-
   display.drawString(0, 0,"SM1:");
   display.drawString(63, 0,SM1Str);
 
@@ -252,76 +244,13 @@ int displayOled()
 }
 int logData()
 {
-  getMoisture2();
-  getMoisture1();
-  getTemp();
-  getDateTime();
-  getLight();
-  csvData = date+ "," + timeStamp + "," + tempStr + "," + humidityStr + "," + SM1Str + "," + SM2Str + "," + lightStr;
+  csvData = (String)controllerID + "," + date + "," + timeStamp + "," + tempStr + "," + humidityStr + "," + SM1Str + "," + SM2Str + "," + lightStr;
   Serial.print("csvData:");
   Serial.print(csvData);
   Serial.print("\n");
   client.publish("outTopic/csvData", PackStringData(csvData, lightchar));
-  displayOled();
   digitalWrite(statusLed, LOW);
   return 0;
-}
-
-int setup_wifi()
-{
-
-  delay(10);
-  // We start by connecti ng to a WiFi network
-  Serial.println();
-  Serial.println("Connecting to ");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, password);
-
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(500);
-    Serial.println(".");
-
-    return 0;
-  }
-
-  randomSeed(micros());
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
-
-  return 0;
-}
-
-void reconnect()
-{
-  // Loop until we're reconnected
-  while (!client.connected())
-  {
-    Serial.println("Attempting MQTT connection...");
-    // Create a random client ID
-    String clientId = "ESP8266Client-";
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str()))
-    {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "reconnected");
-      // ... and resubscribe
-      client.subscribe("inTopic");
-    }
-    else
-    {
-      Serial.println("failed, rc=");
-      Serial.println(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-    }
-  }
 }
 
 // ----------- MQTT CALLBACK - RECIEVING VALUES  ----------------
@@ -345,8 +274,11 @@ void callback(char *topic, byte *payload, unsigned int length)
 void setup()
 {
   display.init();
+  display.clear();
   display.flipScreenVertically();// flipping came in handy for me with regard 
   display.setFont(ArialMT_Plain_16);
+
+  display.clear();
   display.drawString(0, 0, "Init Complete");
   display.display();
   display.clear();
@@ -356,13 +288,13 @@ void setup()
   display.display();
 
   display.clear();
-  display.drawString(0, 0, "Autoconnect");
+  display.drawString(0, 0, "Webserver");
   display.drawString(0, 14, "Initialised");
   display.display();
 
   WiFiManager wifiManager;
-  wifiManager.autoConnect("AutoConnectAP");
-  Serial.println("connected...yeey :)");
+  wifiManager.autoConnect("Smart Irrigation Node 1");
+  Serial.println("connected...yeey :");
 
   display.clear();
   display.drawString(0, 0, "connected to");
@@ -370,13 +302,20 @@ void setup()
   display.display();
 
   Serial.begin(9600);
+
   pinMode(s0, OUTPUT);
   pinMode(s1, OUTPUT);
   pinMode(s2, OUTPUT);
-  pinMode(s3, OUTPUT);//
+  pinMode(s3, OUTPUT);
+
+  digitalWrite(s2, LOW);
+  digitalWrite(s3, LOW);
+
   pinMode(analogInput, INPUT);
+
   Wire.pins(4, 5);// 4=sda, 5=scl
   Wire.begin(4,5);// 4=sda, 5=scl
+
   rtc.begin();
   Serial.println("Started");
    if (! rtc.begin()) {
@@ -393,6 +332,7 @@ void setup()
     Serial.println("RTC is NOT running, let's set the time!");
     rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   }
+
   // Sensor Init
   dht.begin();
   sensor_t sensor;
@@ -404,14 +344,11 @@ void setup()
   delay(10);
   // We start by connecting to a WiFi network
   Serial.println();
-  Serial.println("Connecting to ");
-  Serial.println(ssid);
+  Serial.println("Connecting to WIFI");
   display.clear();
   display.drawString(0, 0, "Connecting");
-  display.drawString(0, 14, (String)ssid);
+  display.drawString(0, 14, "WIFI");
   display.display();
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -430,22 +367,21 @@ void setup()
 
   // CALLING FUNCTIONS
   setOutputMode(outputPins);
-  setup_wifi();
+  //setup_wifi();
   client.setServer(mqtt_server, 1883);
+  display.clear();
+  display.drawString(0, 0, "Server Connected");
+  display.display();
+
   client.setCallback(callback);
-
-
+  display.clear();
+  display.drawString(0, 0, "Callback Established");
+  display.display();
 }
 
 void loop()
 {
   delay(10);
-  if (!client.connected())
-  {
-    Serial.println("wifi Connected");
-    reconnect();
-  }
-
   client.loop();
   //int before = 0;
   long now = millis();
@@ -453,7 +389,16 @@ void loop()
   if (now - lastMsg > 2000)
   {
     lastMsg = now;
+
+    getMoisture2();
+    getMoisture1();
+    getTemp();
+    getDateTime();
+    getLight();
+
     logData();
+    
+    displayOled();
   }
   else{
     digitalWrite(statusLed, HIGH);

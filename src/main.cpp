@@ -16,7 +16,6 @@
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h> 
 
-
 // ----------- DEFINES ----------------
 #define DHTPIN 0
 #define DHTTYPE DHT11
@@ -30,18 +29,15 @@
 // ----------- VARIABLE DECLATIONS ----------------
 
 // ----------- CONSTANT ----------------
-
 const char *mqtt_server = "192.168.0.101";
 
 // ----------- LONG ----------------
 long lastMsg = 0;
 
-
 // ----------- CHAR ----------------
 char lightchar[200];
 
 // ----------- INTEGERS ----------------
-
 int value = 0;
 int light= 0;
 int soilMoisture1 = 0;
@@ -49,9 +45,7 @@ int soilMoisture2 = 0;
 
 // ----------- FLOATS ----------------
 
-float temporaary = 0;
 // ----------- STRING ----------------
-
 String csvData;
 String timeStamp;
 String date;
@@ -76,7 +70,6 @@ int outputPins[] = {0,2, 4, 5, 12, 13, 14, 15};
 int controlPins[4] = {s0, s1, s2, s3};
 
 // ----------- INSTANCES ----------------
-
 WiFiClient espClient;
 PubSubClient client(espClient);
 DHT_Unified dht(DHTPIN, DHTTYPE);
@@ -86,7 +79,6 @@ RTC_DS1307 rtc;
 SSD1306  display(0x3c, 4, 5);
 
 // ----------- HELPER FUNCTIONS ----------------
-
 char *PackIntData(int a, char b[])
 {
   String pubString = String(a);
@@ -217,7 +209,7 @@ int displayOled()
   display.setTextAlignment(TEXT_ALIGN_LEFT);
   display.setFont(ArialMT_Plain_16);
 
-  display.drawString(0, 0,date);//
+  display.drawString(0, 0,date);
   display.drawString(0, 14, timeStamp);
 
   display.drawString(0, 28, "temp:");
@@ -273,6 +265,8 @@ void callback(char *topic, byte *payload, unsigned int length)
 
 void setup()
 {
+  Serial.begin(9600);
+
   display.init();
   display.clear();
   display.flipScreenVertically();// flipping came in handy for me with regard 
@@ -300,8 +294,6 @@ void setup()
   display.drawString(0, 0, "connected to");
   display.drawString(0, 14, "Wifi");
   display.display();
-
-  Serial.begin(9600);
 
   pinMode(s0, OUTPUT);
   pinMode(s1, OUTPUT);
@@ -383,7 +375,6 @@ void loop()
 {
   delay(10);
   client.loop();
-  //int before = 0;
   long now = millis();
 
   if (now - lastMsg > 2000)

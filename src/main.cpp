@@ -301,7 +301,7 @@ void callback(char *topic, byte *payload, unsigned int length)
 {
   Serial.println("Message arrived [");
   Serial.println(topic);
-  Serial.println("] ");
+  Serial.print("] ");
   for (int i = 0; i < (int)length; i++)
   {
     Serial.println((char)payload[i]);
@@ -309,7 +309,9 @@ void callback(char *topic, byte *payload, unsigned int length)
 
   if (strcmp(topic, "inTopic") == 0)
   {
-    togglePins((String)payload[0]);
+    //togglePins((String)payload[0]);
+    Serial.println((String)payload[0]);
+
   }
 }
 
@@ -450,4 +452,4 @@ void loop()
     delay(1000);
     digitalWrite(statusLed, LOW);
   }
-}x
+}
